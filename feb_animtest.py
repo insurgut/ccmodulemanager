@@ -1,7 +1,7 @@
 import datetime # Оставляем для совместимости, если другие команды его используют
 import time # Необходим для sleep_func, хотя sleep_func уже передается
 
-# Важно: sleep_func, edit_message_func и plugin_instance
+# Важно: sleep_func, send_message и plugin_instance
 # будут доступны в глобальной области видимости этого динамически загружаемого модуля
 # благодаря тому, как они передаются в _extract_and_register_commands.
 
@@ -33,4 +33,3 @@ def cmd_loading_animation(account, params):
         log(f"Ошибка в cmd_loading_animation: {e}")
 
     return None # Возвращаем None, так как сообщения отправляются напрямую
-
