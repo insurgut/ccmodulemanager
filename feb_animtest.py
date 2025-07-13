@@ -1,9 +1,8 @@
-import datetime # Оставляем для совместимости, если другие команды его используют
-import time # Необходим для sleep_func, хотя sleep_func уже передается
+import datetime
+import time
 
 # Важно: sleep_func, send_message_wrapper и plugin_instance
-# будут доступны в глобальной области видимости этого динамически загружаемого модуля
-# благодаря тому, как они передаются в _extract_and_register_commands.
+# будут доступны в глобальной области видимости этого динамически загружаемого модуля.
 
 def cmd_loading_animation(account, params):
     """
@@ -30,6 +29,14 @@ def cmd_loading_animation(account, params):
         # Отправляем сообщение об ошибке через обертку
         error_text = f"Ошибка анимации загрузки: {e}"
         send_message_wrapper(error_text)
-        log(f"Ошибка в cmd_loading_animation: {e}")
+        # log(f"Ошибка в cmd_loading_animation: {e}") # log также доступен, если нужно
 
     return None # Возвращаем None, так как сообщения отправляются напрямую
+
+def cmd_time(account, params):
+    """
+    Динамическая команда, которая возвращает текущее время.
+    Использование: .time
+    """
+    current_time = datetime.datetime.now().strftime("%H:%M:%S")
+    return f"Текущее время: {current_time}"
