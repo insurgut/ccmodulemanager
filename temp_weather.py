@@ -9,14 +9,30 @@ import random
 
 def _get_peer_id(peer_obj):
     """Вспомогательная функция для извлечения числового ID из объекта TLRPC.Peer."""
-    if hasattr(peer_obj, 'user_id'):
-        return peer_obj.user_id
-    elif hasattr(peer_obj, 'channel_id'):
-        return -peer_obj.channel_id # Каналы и группы имеют отрицательные ID
-    elif hasattr(peer_obj, 'chat_id'):
-        return -peer_obj.chat_id # Группы также могут иметь chat_id
-    log(f"Не удалось определить peer_id из объекта: {peer_obj}")
-    return None # Вернуть None, если ID не найден
+    try:
+        if hasattr(peer_obj, 'user_id') and peer_obj.user_id != 0:
+            return peer_obj.user_id
+        elif hasattr(peer_obj, 'channel_id') and peer_obj.channel_id != 0:
+            return -peer_obj.channel_id # Каналы и группы имеют отрицательные ID
+        elif hasattr(peer_obj, 'chat_id') and peer_obj.chat_id != 0:
+            return -peer_obj.chat_id # Группы также могут иметь chat_id
+        # Дополнительная проверка на случай, если peer_obj сам является числовым ID или имеет атрибут 'id'
+        elif isinstance(peer_obj, (int, float)):
+            return int(peer_obj)
+        elif hasattr(peer_obj, 'id') and peer_obj.id != 0:
+            # Попытка получить id напрямую, если он существует
+            # Важно: для каналов/чатов может потребоваться отрицательное значение
+            if hasattr(peer_obj, 'access_hash') and peer_obj.access_hash != 0: # Проверка на тип объекта
+                return -peer_obj.id # Предполагаем, что это канал/чат
+            else:
+                return peer_obj.id # Предполагаем, что это пользователь
+        
+        log(f"Не удалось определить peer_id из объекта: Тип={type(peer_obj)}, Объект={peer_obj}, Атрибуты={dir(peer_obj)}")
+        return None # Вернуть None, если ID не найден
+    except Exception as e:
+        log(f"Ошибка в _get_peer_id: {e}. Объект: {peer_obj}")
+        return None
+
 
 def cmd_time(account, params):
     """
