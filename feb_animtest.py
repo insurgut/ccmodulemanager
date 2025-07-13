@@ -10,25 +10,23 @@ def cmd_loading_animation(account, params):
     отправляя последовательные сообщения.
     Использование: .load
     """
-    chat_id = params.peer # Получаем peer из params
-
     try:
-        # Отправляем начальное сообщение через обертку, передавая account, chat_id и текст
-        send_message_wrapper(account, chat_id, "Загрузка.")
+        # Отправляем начальное сообщение через обертку, передавая только текст
+        send_message_wrapper("Загрузка.")
         sleep_func(0.5) # Небольшая задержка перед началом анимации
 
         # Анимация загрузки (отправка новых сообщений через обертку)
         for i in range(1, 4): # 3 шага анимации
-            send_message_wrapper(account, chat_id, "Загрузка" + "." * (i % 3 + 1))
+            send_message_wrapper("Загрузка" + "." * (i % 3 + 1))
             sleep_func(0.7) # Задержка между кадрами анимации
 
         # Финальное сообщение
-        send_message_wrapper(account, chat_id, "Загрузка завершена!")
+        send_message_wrapper("Загрузка завершена!")
         
     except Exception as e:
         # Отправляем сообщение об ошибке через обертку
         error_text = f"Ошибка анимации загрузки: {e}"
-        send_message_wrapper(account, chat_id, error_text)
+        send_message_wrapper(error_text)
         # log(f"Ошибка в cmd_loading_animation: {e}") # log также доступен, если нужно
 
     return None # Возвращаем None, так как сообщения отправляются напрямую
