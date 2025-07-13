@@ -40,4 +40,4 @@ def cmd_time(account, params):
     """
     current_time = datetime.datetime.now().strftime("%H:%M:%S")
     return f"Текущее время: {current_time}"
-#1v
+#2v
