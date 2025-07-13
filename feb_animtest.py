@@ -10,8 +10,6 @@ def cmd_loading_animation(account, params):
     отправляя последовательные сообщения.
     Использование: .load
     """
-    # chat_id = params.peer # Объект чата/диалога - не нужен для send_message_wrapper
-
     try:
         # Отправляем начальное сообщение через обертку
         send_message_wrapper("Загрузка.")
