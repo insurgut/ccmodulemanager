@@ -1,121 +1,77 @@
-import datetime
-import time
-import random
-# requests больше не нужен, так как мы не используем внешний API погоды
+import requests # Необходим для выполнения HTTP-запросов
+import random # Если вам понадобится случайный выбор в ваших командах
+import re # Для работы с регулярными выражениями, например, для форматирования текста
 
-# Важно: sleep_func, send_message_wrapper, edit_message_func и plugin_instance
-# будут доступны в глобальной области видимости этого динамически загружаемого модуля.
-# log также доступен для отладки.
+# Важно: эти функции и переменные доступны для использования в ваших командах
+# log(message) - для записи логов плагина
+# get_user_config(account) - для получения информации о текущем пользователе
+# get_last_fragment() - для получения текущего фрагмента UI (для BulletinHelper)
+# BulletinHelper.show_success/show_error/show_info - для отображения уведомлений
+# send_message_wrapper(account, peer, text) - для отправки сообщений
+# sleep_func(seconds) - для задержки выполнения
+# edit_message_func(account, peer, message_id, new_text) - для изменения сообщения
+# delete_message_func(account, peer, message_id) - для удаления сообщения
+# plugin_instance.get_setting('key') - для доступа к настройкам вашего плагина
 
-def _get_peer_id(peer_obj):
-    """Вспомогательная функция для извлечения числового ID из объекта TLRPC.Peer."""
-    try:
-        if hasattr(peer_obj, 'user_id') and peer_obj.user_id != 0:
-            return peer_obj.user_id
-        elif hasattr(peer_obj, 'channel_id') and peer_obj.channel_id != 0:
-            return -peer_obj.channel_id # Каналы и группы имеют отрицательные ID
-        elif hasattr(peer_obj, 'chat_id') and peer_obj.chat_id != 0:
-            return -peer_obj.chat_id # Группы также могут иметь chat_id
-        # Дополнительная проверка на случай, если peer_obj сам является числовым ID или имеет атрибут 'id'
-        elif isinstance(peer_obj, (int, float)):
-            return int(peer_obj)
-        elif hasattr(peer_obj, 'id') and peer_obj.id != 0:
-            # Попытка получить id напрямую, если он существует
-            # Важно: для каналов/чатов может потребоваться отрицательное значение
-            if hasattr(peer_obj, 'access_hash') and peer_obj.access_hash != 0: # Проверка на тип объекта
-                return -peer_obj.id # Предполагаем, что это канал/чат
-            else:
-                return peer_obj.id # Предполагаем, что это пользователь
-        
-        log(f"Не удалось определить peer_id из объекта: Тип={type(peer_obj)}, Объект={peer_obj}, Атрибуты={dir(peer_obj)}")
-        return None # Вернуть None, если ID не найден
-    except Exception as e:
-        log(f"Ошибка в _get_peer_id: {e}. Объект: {peer_obj}")
-        return None
-
-
-def cmd_time(account, params):
+def cmd_hello(account, params):
     """
-    Динамическая команда, которая возвращает текущее время.
-    Использование: .time
+    Пример простой команды, которая приветствует пользователя.
+    Пример использования: .hello
     """
-    current_time = datetime.datetime.now().strftime("%H:%M:%S")
-    return f"Текущее время: {current_time}"
-
-def cmd_dice(account, params):
-    """
-    Динамическая команда, которая имитирует бросок кубика.
-    Использование: .dice
-    """
-    peer_id = _get_peer_id(params.peer)
-    if peer_id is None:
-        send_message_wrapper(account, params.peer, "Ошибка: Не удалось определить ID чата для броска кубика.")
-        return None
-
-    try:
-        roll = random.randint(1, 6)
-        send_message_wrapper(account, peer_id, f"Вы бросили кубик и выпало число: {roll}!")
-    except Exception as e:
-        error_text = f"Ошибка при броске кубика: {e}"
-        send_message_wrapper(account, peer_id, error_text)
-        log(f"Ошибка в cmd_dice: {e}")
-    return None
+    user_config = get_user_config(account)
+    user_name = user_config.getCurrentUser().first_name if user_config and user_config.getCurrentUser() else "Пользователь"
+    return f"Привет, {user_name}! Я бот с динамическими командами."
 
 def cmd_weather(account, params):
     """
-    Динамическая команда, которая показывает симулированную погоду для указанного города.
-    Не использует внешний API.
-    Использование: .w <город>
-    Например: .w Москва
+    Показывает текущую погоду для указанного города, используя wttr.in.
+    Пример использования: .weather Москва
     """
-    peer_id = _get_peer_id(params.peer)
-    if peer_id is None:
-        send_message_wrapper(account, params.peer, "Ошибка: Не удалось определить ID чата для запроса погоды.")
-        return None
+    command_args = params.message.split(maxsplit=1)
+    if len(command_args) < 2:
+        return "Пожалуйста, укажите город. Пример: `.weather Москва`"
 
-    args = params.message.split(maxsplit=1)
-    if len(args) < 2:
-        send_message_wrapper(account, peer_id, "Пожалуйста, укажите город. Пример: .w Москва")
-        return None
+    location = command_args[1].strip()
+    # Удаляем потенциальные Markdown-теги из локации, чтобы избежать проблем с URL
+    location = location.replace("*", "").replace("_", "").replace("`", "").replace("~", "").replace("|", "")
+
+    # Формат запроса к wttr.in:
+    # %l - Location
+    # %t - Temperature
+    # %c - Condition code (e.g., Sunny)
+    # %C - Condition text (e.g., Clear)
+    # %f - Feels like temperature
+    # %w - Wind
+    # %h - Humidity
+    # \\n - перевод строки
+    weather_url = f"https://wttr.in/{location}?format=%l:+%t,+%c+%C+\\nОщущается:%f\\nВетер:%w\\nВлажность:%h"
     
-    city_name = args[1].strip().capitalize()
-
     try:
-        # Генерируем случайную температуру
-        temperature = random.randint(-10, 30) # От -10 до +30 градусов Цельсия
+        log(f"[cmd_weather] Запрос погоды для {location} через {weather_url}")
+        # Увеличим таймаут на всякий случай
+        response = requests.get(weather_url, timeout=15) 
+        response.raise_for_status() # Вызывает исключение для HTTP ошибок (4xx, 5xx)
+
+        weather_data = response.text.strip()
+
+        # wttr.in возвращает "Unknown location" или похожие сообщения, если город не найден
+        if "Unknown location" in weather_data or "Sorry, no weather information found" in weather_data or "Follow " in weather_data:
+            return f"Не удалось найти погоду для города: *{location}*. Пожалуйста, проверьте название или используйте английский."
+
+        # Форматируем температуру жирным шрифтом
+        weather_data = re.sub(r'([+\-]?\d+°C)', r'*\1*', weather_data)
         
-        # Выбираем случайное описание погоды
-        weather_descriptions = [
-            "ясно",
-            "облачно",
-            "небольшой дождь",
-            "пасмурно",
-            "снег",
-            "солнечно",
-            "туман",
-            "гроза",
-            "переменная облачность"
-        ]
-        weather_description = random.choice(weather_descriptions)
+        # Заменяем стрелки направления ветра на эмодзи для лучшей читаемости
+        weather_data = weather_data.replace("←", "⬅️").replace("→", "➡️").replace("↑", "⬆️").replace("↓", "⬇️")
+        weather_data = weather_data.replace("↖", "↖️").replace("↗", "↗️").replace("↘", "↘️").replace("↙", "↙️")
+        weather_data = weather_data.replace("↔", "↔️").replace("↕", "↕️")
 
-        # Генерируем случайную влажность и скорость ветра
-        humidity = random.randint(40, 95)
-        wind_speed = round(random.uniform(1.0, 10.0), 1) # От 1.0 до 10.0 м/с
-
-        # Формируем сообщение о погоде
-        weather_message = (
-            f"Симулированная погода в {city_name}:\n"
-            f"Температура: {temperature}°C\n"
-            f"Описание: {weather_description.capitalize()}\n"
-            f"Влажность: {humidity}%\n"
-            f"Скорость ветра: {wind_speed} м/с"
-        )
-        send_message_wrapper(account, peer_id, weather_message)
-
+        log(f"[cmd_weather] Получены данные погоды: {weather_data}")
+        return weather_data
+    except requests.exceptions.RequestException as e:
+        log(f"[cmd_weather] Ошибка сети при запросе погоды для {location}: {e}")
+        return f"Не удалось получить погоду для *{location}* из-за сетевой ошибки. Попробуйте позже."
     except Exception as e:
-        error_text = f"Произошла ошибка при симуляции погоды: {e}"
-        send_message_wrapper(account, peer_id, error_text)
-        log(f"Ошибка в cmd_weather (симуляция): {e}")
-    
-    return None
+        log(f"[cmd_weather] Неожиданная ошибка в cmd_weather для {location}: {e}")
+        return f"Произошла непредвиденная ошибка при получении погоды для *{location}*."
 
