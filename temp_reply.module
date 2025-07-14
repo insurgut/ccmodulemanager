@@ -1,0 +1,14 @@
+def cmd_fileinfo(params):
+    reply_file_url = FuncGetReplyFileUrl()
+    reply_file_name = FuncGetReplyFileName()
+    reply_mime_type = FuncGetReplyMimeType()
+
+    if reply_file_url:
+        info = f"Информация о файле:\n" \
+               f"Имя файла: {reply_file_name if reply_file_name else 'Неизвестно'}\n" \
+               f"MIME-тип: {reply_mime_type if reply_mime_type else 'Неизвестно'}"
+        FuncDisplay(info)
+    else:
+        FuncDisplay("Пожалуйста, ответьте на сообщение с файлом.")
+    
+    return None # Не отправляем сообщение в чат
