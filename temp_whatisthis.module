@@ -32,6 +32,6 @@ def cmd_whatisthis(params):
         
     FuncDisplay(message_to_display)
     
-    # Возвращаем None и True, чтобы не отправлять новое сообщение в чат
+    # Возвращаем пустую строку и True, чтобы не отправлять новое сообщение в чат
     # и удалить оригинальную команду .whatisthis
-    return None, True
+    return "", True
