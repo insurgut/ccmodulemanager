@@ -1,0 +1,37 @@
+# Этот модуль определяет тип содержимого в отвеченном сообщении.
+
+def cmd_whatisthis(params):
+    """
+    Определяет, что найдено в отвеченном сообщении (текст, фото, файл).
+    """
+    reply_text = FuncGetReplyText()
+    reply_photo_url = FuncGetReplyPhotoUrl()
+    reply_file_url = FuncGetReplyFileUrl()
+    reply_mime_type = FuncGetReplyMimeType()
+    reply_file_name = FuncGetReplyFileName()
+
+    found_something = False
+    message_to_display = "В отвеченном сообщении найдено:\n"
+
+    if reply_text:
+        message_to_display += f"- Текст: '{reply_text[:50]}...'\n" if len(reply_text) > 50 else f"- Текст: '{reply_text}'\n"
+        found_something = True
+    
+    if reply_photo_url:
+        message_to_display += f"- Фотография (URL заглушка: {reply_photo_url})\n"
+        found_something = True
+    
+    if reply_file_url:
+        file_info = f"Имя: {reply_file_name if reply_file_name else 'Неизвестно'}, " \
+                    f"Тип: {reply_mime_type if reply_mime_type else 'Неизвестно'}"
+        message_to_display += f"- Файл ({file_info}, URL заглушка: {reply_file_url})\n"
+        found_something = True
+
+    if not found_something:
+        message_to_display = "Не удалось найти текст, фото или файл в отвеченном сообщении."
+        
+    FuncDisplay(message_to_display)
+    
+    # Возвращаем None и True, чтобы не отправлять новое сообщение в чат
+    # и удалить оригинальную команду .whatisthis
+    return None, True
